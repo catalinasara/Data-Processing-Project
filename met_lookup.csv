@@ -1,0 +1,13 @@
+activity,met_value,compendium_code,is_proxy,source
+sitting,1.0,07021,False,scraped
+lying,1.0,07011,False,scraped
+standing,1.3,07040,False,scraped
+shuffling,2.3,17151,True,scraped
+walking,4.0,17255,False,scraped
+stairs_up,4.5,17133,False,scraped
+stairs_down,3.5,17070,False,scraped
+running,9.3,12050,False,scraped
+cycling_sit,6.8,01020,False,scraped
+cycling_stand,7.0,01016,False,scraped
+cycling_sit_inactive,1.0,07021,True,scraped
+cycling_stand_inactive,1.3,07040,True,scraped
