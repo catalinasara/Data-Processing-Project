@@ -9,24 +9,25 @@ A full batch data processing pipeline combining wearable sensor data, weather, a
 ## What this project does
 
 The pipeline ingests four data sources (HARTH and HAR70+ wearable sensor datasets, Open-Meteo historical weather, and the 2024 Compendium of Physical Activities), cleans and standardises them, segments the raw 50Hz sensor stream into 2-second activity windows, enriches each window with weather context and intensity-calibrated MET values, and loads the result into a SQLite star schema. The Streamlit app reads from that database to estimate calories and recommend activities.
-
 ## Repository structure
+
+```
+Data-Processing-Project/
 ├── README.md
-├── requirements.txt                         Python dependencies
+├── requirements.txt
 ├── notebook/
-│   └── data_processing_pipeline.ipynb       Full pipeline, sectioned by rubric requirement
+│   └── data_processing_pipeline.ipynb
 ├── app/
-│   ├── app.py                               Streamlit application
-│   └── config.toml                          Theme configuration
+│   ├── app.py
+│   └── config.toml
 ├── data/
-│   ├── met_lookup.csv                       MET reference table
-│   └── sample/                              Small sample of raw data for evaluation
+│   ├── met_lookup.csv
+│   ├── weather_raw.json
+│   └── sample/
 │       ├── harth_S006_sample.csv
 │       └── har70plus_501_sample.csv
-└── .devcontainer/                           Codespaces / devcontainer setup
-The pipeline is organised as a single Jupyter notebook with sections mirroring the project rubric (4.1 Ingestion → 4.2 Storage → 4.3 Cleaning → 4.4 Processing → 4.5 Querying → 4.6 Visualisation → 4.7 Governance). This keeps the pipeline as one reproducible end-to-end artifact rather than fragmenting it across multiple files.
-
-The final `pipeline.db` (around 63 MB) is hosted as a GitHub release asset, not committed to the repo. The Streamlit app downloads it automatically on first run.
+└── .devcontainer/
+```
 
 ## Running the Streamlit app
 
