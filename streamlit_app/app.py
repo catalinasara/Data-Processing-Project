@@ -50,8 +50,7 @@ import streamlit as st
 
 APP_TITLE = "Calorie Coach"
 APP_TAGLINE = "A calorie tool built on 85,000+ real sensor windows"
-DB_URL = "https://github.com/catalinasara/Data-Processing-Project/releases/download/v1.0.0/pipeline.db"
-
+DB_URL = "https://github.com/catalinasara/health-sensor-pipeline/releases/download/v1.1/pipeline.db"
 DB_PATH = Path(__file__).parent / "pipeline.db"
 
 if not DB_PATH.exists():
