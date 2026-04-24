@@ -3,12 +3,23 @@
 A full batch data processing pipeline combining wearable sensor data, weather, and activity intensity references into a query-ready analytical layer, plus a Streamlit app for calorie estimation and activity recommendations.
 
 **Team:** Catalina Sara, Charbel El-Fakhry, Rayya Sarieddine, Talia Taha, Yasmin El-Souki  
-**Course:** MSBA 305 — Data Processing Framework, Spring 2025/2026  
+**Course:** MSBA 305 - Data Processing Framework, Spring 2025/2026  
 **Instructor:** Dr. Ahmad El-Hajj
 
 ## What this project does
 
 The pipeline ingests four data sources (HARTH and HAR70+ wearable sensor datasets, Open-Meteo historical weather, and the 2024 Compendium of Physical Activities), cleans and standardises them, segments the raw 50Hz sensor stream into 2-second activity windows, enriches each window with weather context and intensity-calibrated MET values, and loads the result into a SQLite star schema. The Streamlit app reads from that database to estimate calories and recommend activities.
+## Database Output
+
+The final output of the pipeline is `pipeline.db`, a SQLite database structured as a star schema.
+
+Main tables include:
+- `fact_window` - activity windows with MET and weather context  
+- `dim_activity` - standardized activity labels  
+- `dim_subject` - participant metadata  
+- `dim_weather_hour` - hourly environmental conditions  
+
+This database supports all analytical queries used in the report and Streamlit dashboard.
 ## Repository structure
 
 ```
@@ -28,20 +39,35 @@ Data-Processing-Project/
 │       └── har70plus_501_sample.csv
 └── .devcontainer/
 ```
+## Streamlit Application Purpose - BurnWise
+
+Burnwise demonstrates how processed data can be used in an interactive decision-support tool. Users can:
+
+- Input age, weight, and calorie goals  
+- Select an activity  
+- Estimate calories burned  
+- Explore activity recommendations
+- Explore visulization dashboard and insights 
 
 ## Running the Streamlit app
 
 **Requirements:** Python 3.10 or higher.
-
 1. Clone the repository:
-git clone https://github.com/catalinasara/Data-Processing-Project.git
-cd Data-Processing-Project
-2. Install dependencies:
-pip install -r requirements.txt
-3. Run the app:
-streamlit run app/app.py
+```
+   git clone https://github.com/catalinasara/health-sensor-pipeline.git
+   cd health-sensor-pipeline
+```
 
-The app opens at http://localhost:8501. On first run it downloads `pipeline.db` from the v1.0 release (around 63 MB, one-time only).
+2. Install dependencies:
+```
+   pip install -r requirements.txt
+```
+
+3. Run the app:
+```
+   streamlit run app/app.py
+```
+The app opens at http://localhost:8501. On first run it downloads `pipeline.db` from the v1.1.0 release (around 63 MB, one-time only).
 
 ## Running the pipeline notebook
 
@@ -71,7 +97,7 @@ Streamlit app:
 Pipeline notebook additionally uses:
 - numpy, requests, beautifulsoup4 (for the MET Compendium scrape), matplotlib (EDA plots)
 
-All listed in `requirements.txt`.
+All dependencies required to run both the pipeline and the Streamlit app are listed in `requirements.txt`. Installing this file recreates the full working environment.
 
 ## External data sources
 
