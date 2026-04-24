@@ -1,5 +1,5 @@
 """
-Calorie Coach - Streamlit app for the HARTH + HAR70+ pipeline.
+BurnWise - Streamlit app for the HARTH + HAR70+ pipeline.
 
 Three tabs:
   - Estimate calories (Mode A): calculator for a chosen activity + effort
@@ -480,6 +480,15 @@ st.markdown(f"""
         color: {TEXT_SECONDARY};
     }}
     .cohort-card strong {{ color: {ACCENT}; }}
+    
+    [data-testid="stSidebar"] {
+    min-width: 300px !important;
+    max-width: 300px !important;
+}
+
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -529,16 +538,14 @@ def load_cohort_activities() -> pd.DataFrame:
     conn = get_connection()
     return pd.read_sql(
         """
-        SELECT s.cohort            AS cohort,
+        SELECT f.source            AS cohort,
                a.activity_name     AS activity_name,
-               a.met_value         AS met_value,
-               a.intensity_class   AS intensity_class,
+               a.base_met          AS met_value,
                COUNT(*)            AS n_windows
-        FROM fact_window  f
-        JOIN dim_subject  s ON f.subject_id  = s.subject_id
+        FROM fact_activity_window f
         JOIN dim_activity a ON f.activity_id = a.activity_id
-        GROUP BY s.cohort, a.activity_name, a.met_value, a.intensity_class
-        ORDER BY s.cohort, n_windows DESC
+        GROUP BY f.source, a.activity_name, a.base_met
+        ORDER BY f.source, n_windows DESC
         """,
         conn,
     )
@@ -548,49 +555,49 @@ def load_cohort_activities() -> pd.DataFrame:
 def load_provenance() -> dict:
     conn = get_connection()
     stats = {}
-    stats["n_subjects"]   = conn.execute("SELECT COUNT(*) FROM dim_subject").fetchone()[0]
-    stats["n_windows"]    = conn.execute("SELECT COUNT(*) FROM fact_window").fetchone()[0]
+    stats["n_subjects"]   = conn.execute("SELECT COUNT(*) FROM dim_participant").fetchone()[0]
+    stats["n_windows"]    = conn.execute("SELECT COUNT(*) FROM fact_activity_window").fetchone()[0]
     stats["n_activities"] = conn.execute("SELECT COUNT(*) FROM dim_activity").fetchone()[0]
     cohort_counts = dict(conn.execute(
-        "SELECT cohort, COUNT(*) FROM dim_subject GROUP BY cohort"
+        "SELECT source, COUNT(*) FROM dim_participant GROUP BY source"
     ).fetchall())
     stats["n_harth"]  = cohort_counts.get("HARTH", 0)
     stats["n_har70"]  = cohort_counts.get("HAR70+", 0)
     window_counts = dict(conn.execute("""
-        SELECT s.cohort, COUNT(*) FROM fact_window f
-        JOIN dim_subject s ON f.subject_id = s.subject_id
-        GROUP BY s.cohort
+        SELECT f.source, COUNT(*) FROM fact_activity_window f
+        GROUP BY f.source
     """).fetchall())
     stats["windows_harth"] = window_counts.get("HARTH", 0)
     stats["windows_har70"] = window_counts.get("HAR70+", 0)
     return stats
 
-
 @st.cache_data
 def load_intensity_mix() -> pd.DataFrame:
     conn = get_connection()
     return pd.read_sql("""
-        SELECT s.cohort           AS cohort,
-               a.intensity_class  AS intensity_class,
-               COUNT(*)           AS n_windows
-        FROM fact_window  f
-        JOIN dim_subject  s ON f.subject_id  = s.subject_id
+        SELECT f.source AS cohort,
+               CASE 
+                   WHEN a.base_met < 1.5 THEN 'sedentary'
+                   WHEN a.base_met < 3.0 THEN 'light'
+                   WHEN a.base_met < 6.0 THEN 'moderate'
+                   ELSE 'vigorous'
+               END AS intensity_class,
+               COUNT(*) AS n_windows
+        FROM fact_activity_window f
         JOIN dim_activity a ON f.activity_id = a.activity_id
-        GROUP BY s.cohort, a.intensity_class
+        GROUP BY f.source, intensity_class
     """, conn)
-
 
 @st.cache_data
 def load_db_weather_dates() -> list[date]:
     conn = get_connection()
     df = pd.read_sql(
-        "SELECT DISTINCT DATE(hour_key) AS d FROM dim_weather_hour ORDER BY d", conn,
+        "SELECT DISTINCT DATE(hour_timestamp) AS d FROM dim_weather ORDER BY d", conn,
     )
     return [date.fromisoformat(d) for d in df["d"].tolist()]
 
 
 def lookup_weather_db(target_date: date) -> dict | None:
-    """Historical weather from the pipeline DB."""
     conn = get_connection()
     bad_codes_ph = ",".join("?" * len(BAD_WEATHER_CODES))
     query = f"""
@@ -600,8 +607,8 @@ def lookup_weather_db(target_date: date) -> dict | None:
                MAX(CASE WHEN weather_code IN ({bad_codes_ph})
                         THEN 1 ELSE 0 END)                          AS has_bad_weather,
                MAX(weather_code)                                    AS worst_code
-        FROM dim_weather_hour
-        WHERE DATE(hour_key) = ?
+        FROM dim_weather
+        WHERE DATE(hour_timestamp) = ?
     """
     params = (*sorted(BAD_WEATHER_CODES), target_date.isoformat())
     summary = pd.read_sql(query, conn, params=params).iloc[0]
