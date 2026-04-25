@@ -1278,14 +1278,21 @@ with tab_about:
                 ": %{x:.1f}%<extra></extra>"
             ),
         ))
-    fig.update_layout(
-        title="Activity mix per cohort (% of windows)",
-        barmode="stack",
-        xaxis_title="% of cohort's windows",
-        yaxis_title="",
-        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5,
-                    font=dict(size=10)),
-    )
+fig.update_layout(
+    title="Activity mix per cohort (% of windows)",
+    barmode="stack",
+    xaxis_title="% of cohort's windows",
+    yaxis_title="",
+    legend=dict(
+        orientation="h",
+        yanchor="top",
+        y=-0.35,   
+        xanchor="center",
+        x=0.5,
+        font=dict(size=9),   
+    ),
+    margin=dict(b=120) 
+)
     st.plotly_chart(style_plot(fig, height=340), use_container_width=True)
     with st.expander("Interpretation"):
         harth_hours = int(footprint[footprint["cohort"] == "HARTH"]["recording_hours"].iloc[0])
