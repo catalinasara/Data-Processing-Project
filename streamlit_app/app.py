@@ -1157,36 +1157,22 @@ with tab_about:
     # -----------------------------------------------------------------------------
     # Headline stats
     # -----------------------------------------------------------------------------
-    st.markdown("#### At a glance")
-
-    h1, h2, h3, h4 = st.columns(4)
-    with h1:
+    c1, c2 = st.columns(2)
+    with c1:
         st.markdown(headline_stat(
             f"{prov['n_windows']:,}",
-            "Sensor windows",
-            f"Each window is 2 seconds of movement data. "
-            f"{prov['windows_harth']:,} from working-age adults, {prov['windows_har70']:,} from adults 70+."
+            "Sensor windows analysed",
+            f"Each is 2 seconds of real movement data. "
+            f"{prov['n_subjects']} volunteers contributed — "
+            f"{prov['n_harth']} working-age, {prov['n_har70']} age 70+."
         ), unsafe_allow_html=True)
-    with h2:
+    with c2:
         st.markdown(headline_stat(
-            f"{size_ratio:.1f}×",
-            "Cohort size gap",
-            f"HARTH has {size_ratio:.1f}× more windows than HAR70+. "
-            "Any cross-cohort number carries this caveat."
-        ), unsafe_allow_html=True)
-    with h3:
-        st.markdown(headline_stat(
-            f"{har70_activities} vs {harth_activities}",
-            "Activity coverage",
-            f"HAR70+ shows {har70_activities} activities. HARTH shows {harth_activities}. "
-            "Running and cycling only exist in HARTH data."
-        ), unsafe_allow_html=True)
-    with h4:
-        st.markdown(headline_stat(
-            f"{har70_vigorous:,}",
-            "Vigorous HAR70+ windows",
-            f"Zero. Every vigorous data point comes from HARTH ({harth_vigorous:,} windows). "
-            "That gap shapes what the app can recommend."
+            f"{prov['n_activities']}",
+            "Activities tracked",
+            "From sitting to running. Each activity carries a MET reference from "
+            "the 2024 Compendium of Physical Activities and calibrated intensity "
+            "per cohort."
         ), unsafe_allow_html=True)
 
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -1209,7 +1195,7 @@ with tab_about:
 
     act1_metric = st.radio(
         "What to show",
-        options=["Subjects", "Recording hours", "2-second windows"],
+        options=["2-second windows", "Recording hours", "Subjects"],
         horizontal=True,
         key="act1_metric",
         label_visibility="collapsed",
@@ -1236,76 +1222,73 @@ with tab_about:
     }
     metric_col, metric_unit = metric_map[act1_metric]
 
-    col_left, col_right = st.columns([1, 1.4])
+    # Footprint chart — full width, vertical bars
+    fig = go.Figure()
+    for _, r in footprint.iterrows():
+        color = COLOR_HARTH if r["cohort"] == "HARTH" else COLOR_HAR70
+        fig.add_trace(go.Bar(
+            x=[r["cohort"]],
+            y=[r[metric_col]],
+            marker=dict(color=color, line=dict(color=color, width=1)),
+            text=[f"{r[metric_col]:,.0f}"],
+            textposition="outside",
+            textfont=dict(color=TEXT_PRIMARY, size=14),
+            showlegend=False,
+            hovertemplate="<b>%{x}</b><br>" + f"{act1_metric}: " + "%{y:,}<extra></extra>",
+            name=r["cohort"],
+        ))
+    fig.update_layout(
+        title=f"Recording footprint: {act1_metric.lower()}",
+        xaxis_title="", yaxis_title=act1_metric,
+    )
+    st.plotly_chart(style_plot(fig, height=320), use_container_width=True)
 
-    with col_left:
-        fig = go.Figure()
-        for _, r in footprint.iterrows():
-            color = COLOR_HARTH if r["cohort"] == "HARTH" else COLOR_HAR70
-            fig.add_trace(go.Bar(
-                x=[r[metric_col]],
-                y=[r["cohort"]],
-                orientation="h",
-                marker=dict(color=color, line=dict(color=color, width=1)),
-                text=[f"{r[metric_col]:,.0f} {metric_unit}"],
-                textposition="outside",
-                textfont=dict(color=TEXT_PRIMARY, size=12),
-                showlegend=False,
-                hovertemplate="<b>%{y}</b><br>" + f"{metric_col}: " + "%{x:,}<extra></extra>",
-            ))
-        fig.update_layout(
-            title=f"Recording footprint: {act1_metric.lower()}",
-            xaxis_title=act1_metric, yaxis_title="",
-        )
-        st.plotly_chart(style_plot(fig, height=260), use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    with col_right:
-        # Activity mix: stacked percentage bar per cohort
-        mix_pivot = all_activities.copy()
-        totals = mix_pivot.groupby("cohort")["n_windows"].transform("sum")
-        mix_pivot["pct"] = mix_pivot["n_windows"] / totals * 100
-        mix_pivot["display"] = mix_pivot["activity_name"].map(display_name)
+    # Activity mix — full width stacked bar
+    mix_pivot = all_activities.copy()
+    totals = mix_pivot.groupby("cohort")["n_windows"].transform("sum")
+    mix_pivot["pct"] = mix_pivot["n_windows"] / totals * 100
+    mix_pivot["display"] = mix_pivot["activity_name"].map(display_name)
 
-        # Activity palette — categorical, distinct, works on dark bg
-        act_order = (all_activities[all_activities["cohort"] == "HARTH"]
-                     .sort_values("n_windows", ascending=False)["activity_name"].tolist())
-        # Add any activities unique to HAR70+ at the end
-        for a in all_activities["activity_name"].unique():
-            if a not in act_order:
-                act_order.append(a)
+    # Order activities by HARTH descending, then append any HAR70+-only at end
+    act_order = (all_activities[all_activities["cohort"] == "HARTH"]
+                 .sort_values("n_windows", ascending=False)["activity_name"].tolist())
+    for a in all_activities["activity_name"].unique():
+        if a not in act_order:
+            act_order.append(a)
 
-        act_palette = [
-            "#9AE62F", "#4FC3F7", "#FFB547", "#E879F9", "#60A5FA",
-            "#34D399", "#F87171", "#A78BFA", "#FB923C", "#22D3EE",
-            "#FBBF24", "#F472B6",
-        ]
+    act_palette = [
+        "#9AE62F", "#4FC3F7", "#FFB547", "#E879F9", "#60A5FA",
+        "#34D399", "#F87171", "#A78BFA", "#FB923C", "#22D3EE",
+        "#FBBF24", "#F472B6",
+    ]
 
-        fig = go.Figure()
-        for i, act in enumerate(act_order):
-            sub = mix_pivot[mix_pivot["activity_name"] == act]
-            if sub.empty:
-                continue
-            fig.add_trace(go.Bar(
-                name=display_name(act),
-                y=sub["cohort"],
-                x=sub["pct"],
-                orientation="h",
-                marker=dict(color=act_palette[i % len(act_palette)]),
-                hovertemplate=(
-                    "<b>%{y}</b><br>" + display_name(act) +
-                    ": %{x:.1f}%<extra></extra>"
-                ),
-            ))
-        fig.update_layout(
-            title="Activity mix per cohort (% of windows)",
-            barmode="stack",
-            xaxis_title="% of cohort's windows",
-            yaxis_title="",
-            legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5,
-                        font=dict(size=10)),
-        )
-        st.plotly_chart(style_plot(fig, height=320), use_container_width=True)
-
+    fig = go.Figure()
+    for i, act in enumerate(act_order):
+        sub = mix_pivot[mix_pivot["activity_name"] == act]
+        if sub.empty:
+            continue
+        fig.add_trace(go.Bar(
+            name=display_name(act),
+            y=sub["cohort"],
+            x=sub["pct"],
+            orientation="h",
+            marker=dict(color=act_palette[i % len(act_palette)]),
+            hovertemplate=(
+                "<b>%{y}</b><br>" + display_name(act) +
+                ": %{x:.1f}%<extra></extra>"
+            ),
+        ))
+    fig.update_layout(
+        title="Activity mix per cohort (% of windows)",
+        barmode="stack",
+        xaxis_title="% of cohort's windows",
+        yaxis_title="",
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5,
+                    font=dict(size=10)),
+    )
+    st.plotly_chart(style_plot(fig, height=340), use_container_width=True)
     with st.expander("What this means"):
         harth_hours = int(footprint[footprint["cohort"] == "HARTH"]["recording_hours"].iloc[0])
         har70_hours = int(footprint[footprint["cohort"] == "HAR70+"]["recording_hours"].iloc[0])
