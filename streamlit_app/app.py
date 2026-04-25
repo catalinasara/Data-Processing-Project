@@ -21,7 +21,7 @@ import streamlit as st
 # =============================================================================
 
 APP_TITLE = "BurnWise"
-APP_TAGLINE = "A calorie tool built on 85,000+ real sensor windows"
+APP_TAGLINE = "Calorie estimates based on HARTH and HAR70+ sensor data"
 DB_URL = "https://github.com/catalinasara/msba305-health-sensor-pipeline/releases/download/v1.1.0/pipeline.db"
 DB_PATH = Path(__file__).parent / "pipeline.db"
 
@@ -750,7 +750,7 @@ with st.sidebar:
     st.markdown(
         f"<div style='color:{TEXT_MUTED}; font-size:0.78rem; "
         f"margin:-0.3rem 0 1rem 0; line-height:1.5;'>"
-        "Tell us a bit about you and we'll match you to the right reference group."
+        "Enter your details so the app can use the relevant reference group."
         "</div>",
         unsafe_allow_html=True,
     )
@@ -798,7 +798,7 @@ with tab_estimate:
     st.markdown("### How many calories will this burn?")
     st.markdown(
         f"<p style='color:{TEXT_SECONDARY}; margin-bottom:1.2rem;'>"
-        "Pick an activity, say how hard you're going and for how long."
+        "Select an activity, effort level, and duration."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -847,16 +847,16 @@ with tab_estimate:
         mcol3.metric("Intensity", intensity_class.title())
 
         if total_kcal < 50:
-            coach_line = "Quick sessions are about consistency more than calorie burn. Still counts."
+            coach_line = "Short sessions are useful for consistency, even when the calorie burn is low."
         elif total_kcal < 150:
-            coach_line = "Solid range for a single session. Easy to fit into most days."
+            coach_line = "This is a practical range for a single session and is manageable for most days."
         elif total_kcal < 300:
-            coach_line = "Real burn. Three or four of these a week adds up quickly."
+            coach_line = "This is a meaningful calorie burn. Repeating this session during the week can make a clear difference."
         else:
-            coach_line = f"{total_kcal:.0f} calories is a proper session. Don't forget to eat after."
+            coach_line = f"{total_kcal:.0f} calories is a higher-intensity session. Remember to recover properly afterwards."
         coach_note(coach_line)
 
-        st.markdown("### How this stacks up against similar activities")
+        st.markdown("### Comparison with similar activities")
         alternatives = pickable[
             (pickable["intensity_class"] == intensity_class) &
             (pickable["activity_name"] != chosen_activity)
@@ -905,7 +905,7 @@ with tab_estimate:
                 use_container_width=True,
             )
 
-            with st.expander("Analytical read on this comparison"):
+            with st.expander("Interpretation of this comparison"):
                 top = compare_df.iloc[-1]
                 bot = compare_df.iloc[0]
                 ratio = top["kcal"] / bot["kcal"] if bot["kcal"] > 0 else 0
@@ -931,7 +931,7 @@ Confidence in each estimate scales with how many sensor windows back it up. {dis
         else:
             st.caption("Not enough other activities in this intensity band to compare against.")
 
-        with st.expander("Show the math"):
+        with st.expander("Calculation details"):
             st.markdown(f"""
 **Formula:** calories = MET × kg × hours
 
@@ -955,7 +955,7 @@ with tab_recommend:
     st.markdown("### I want to burn some calories. What should I do?")
     st.markdown(
         f"<p style='color:{TEXT_SECONDARY}; margin-bottom:1.2rem;'>"
-        "Set a goal and a time window. We'll show what fits and check the weather."
+        "Set a calorie goal and time limit. The app checks which activities fit and includes weather context."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -981,7 +981,7 @@ with tab_recommend:
 
     if weather is None:
         st.info(
-            f"Couldn't fetch weather for {target_date.isoformat()}. "
+            f"Weather data could not be fetched for {target_date.isoformat()}. "
             "Showing all activities."
         )
     else:
@@ -1029,20 +1029,20 @@ with tab_recommend:
 
     if recommended.empty:
         st.warning(
-            f"Nothing in the {cohort} reference data can hit **{goal_kcal} kcal** in "
+            f"No activity in the {cohort} reference data can hit **{goal_kcal} kcal** in "
             f"**{max_duration} min** at your weight"
             + (" with the outdoor filter on" if filter_outdoor else "")
-            + ". Try giving yourself more time, or lower the goal."
+            + ". Try increasing the time limit or lowering the calorie goal."
         )
     else:
         top = recommended.iloc[0]
         coach_note(
-            f"Fastest way there: <strong>{display_name(top['activity_name']).lower()}</strong> "
+            f"Fastest option: <strong>{display_name(top['activity_name']).lower()}</strong> "
             f"for about <strong>{top['duration_needed_min']:.0f} minutes</strong>. "
             f"You've got <strong>{len(recommended)}</strong> options total below."
         )
 
-        st.markdown("### Every option at a glance")
+        st.markdown("### Activity options at a glance")
 
         chart_df = rec.copy().sort_values("duration_needed_min")
         chart_df["display_name"] = chart_df["activity_name"].map(display_name)
@@ -1099,7 +1099,7 @@ with tab_recommend:
             unsafe_allow_html=True,
         )
 
-        with st.expander("Analytical read on this recommendation"):
+        with st.expander("Interpretation of this recommendation"):
             n_total = len(chart_df)
             n_fit = int(chart_df["recommended"].sum())
             n_over_time = int((~chart_df["fits_time"]).sum())
@@ -1121,24 +1121,23 @@ Of the **{n_total}** activities in the {cohort_label} reference set, **{n_fit}**
 
 Within the feasible set, the efficiency spread is about **{speed_gap:.1f}x** (slowest vs fastest), driven entirely by MET differences. {display_name(fastest_activity['activity_name'])} at MET {fastest_activity['met_value']:.1f} is {speed_gap:.1f}x more time-efficient than {display_name(slowest_rec['activity_name']).lower()} at MET {slowest_rec['met_value']:.1f}.
 
-If time is the constraint, intensity is the lever. If intensity is the constraint, you budget more time. This chart makes the trade-off visible instead of hiding it behind a single best pick.
+When time is limited, higher-MET activities reach the calorie goal faster. When lower intensity is preferred, the user needs more time. This chart shows the trade-off clearly instead of reducing it to one recommendation.
             """)
 # -----------------------------------------------------------------------------
-# MODE C — ABOUT / VISUAL REPORTING
+# MODE C, ABOUT / VISUAL REPORTING
 # -----------------------------------------------------------------------------
 
 with tab_about:
     # -----------------------------------------------------------------------------
     # Intro
     # -----------------------------------------------------------------------------
-    st.markdown("### The data story behind every estimate")
+    st.markdown("### How the data supports the estimates")
     st.markdown(
         f"<p style='color:{TEXT_SECONDARY}; margin-bottom:1.5rem; max-width:780px;'>"
-        "Every number BurnWise shows you traces back to real sensor data from real people. "
-        "This tab walks through three questions the pipeline answered on the way to the app: "
-        "who we measured, whether a shared label means the same thing across ages, and what "
-        "that means for the calorie numbers we show you. Each view is interactive — change the "
-        "filters and see how the picture shifts."
+        "BurnWise uses processed activity windows from HARTH and HAR70+ to estimate calorie burn "
+        "and compare activity patterns. This tab explains dataset coverage, cohort differences, "
+        "and how the processed data supports the app's calorie estimates and recommendations. "
+        "Use the filters to see how the results change across views."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -1163,7 +1162,7 @@ with tab_about:
             f"{prov['n_windows']:,}",
             "Sensor windows analysed",
             f"Each is 2 seconds of real movement data. "
-            f"{prov['n_subjects']} volunteers contributed — "
+            f"{prov['n_subjects']} volunteers contributed, "
             f"{prov['n_harth']} working-age, {prov['n_har70']} age 70+."
         ), unsafe_allow_html=True)
     with c2:
@@ -1178,17 +1177,16 @@ with tab_about:
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # =============================================================================
-    # ACT 1 — Who are we measuring?
+    # ACT 1, Who is represented in the data?
     # =============================================================================
     st.markdown(f"""
 <div style='border-left:3px solid {ACCENT}; padding-left:1rem; margin:1rem 0 1.5rem 0;'>
   <div style='color:{ACCENT}; font-family:"Oswald", sans-serif; font-size:0.75rem;
-              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Act 1</div>
+              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Dataset coverage</div>
   <div style='color:{TEXT_PRIMARY}; font-family:"Oswald", sans-serif; font-size:1.5rem;
-              font-weight:500;'>Who are we measuring?</div>
+              font-weight:500;'>Who is represented in the data?</div>
   <div style='color:{TEXT_SECONDARY}; font-size:0.9rem; margin-top:0.4rem; max-width:720px;'>
-    Same sensors. Same labels. Same protocol. The numbers say the two groups behave very
-    differently once they start moving.
+    The two cohorts use similar activity labels, but their recorded movement patterns differ.
   </div>
 </div>
     """, unsafe_allow_html=True)
@@ -1222,7 +1220,7 @@ with tab_about:
     }
     metric_col, metric_unit = metric_map[act1_metric]
 
-    # Footprint chart — full width, vertical bars
+    # Footprint chart, full width, vertical bars
     fig = go.Figure()
     for _, r in footprint.iterrows():
         color = COLOR_HARTH if r["cohort"] == "HARTH" else COLOR_HAR70
@@ -1245,7 +1243,7 @@ with tab_about:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Activity mix — full width stacked bar
+    # Activity mix, full width stacked bar
     mix_pivot = all_activities.copy()
     totals = mix_pivot.groupby("cohort")["n_windows"].transform("sum")
     mix_pivot["pct"] = mix_pivot["n_windows"] / totals * 100
@@ -1289,31 +1287,30 @@ with tab_about:
                     font=dict(size=10)),
     )
     st.plotly_chart(style_plot(fig, height=340), use_container_width=True)
-    with st.expander("What this means"):
+    with st.expander("Interpretation"):
         harth_hours = int(footprint[footprint["cohort"] == "HARTH"]["recording_hours"].iloc[0])
         har70_hours = int(footprint[footprint["cohort"] == "HAR70+"]["recording_hours"].iloc[0])
         st.markdown(f"""
 HARTH captured roughly **{harth_hours} hours** of recording across {prov['n_harth']} working-age adults. HAR70+ captured **{har70_hours} hours** across {prov['n_har70']} adults 70+. The gap in windows is wider than the gap in subjects, so HAR70+ subjects contributed shorter sessions on average.
 
-The activity mix tells a second story. Walking dominates HAR70+, while HARTH spreads more evenly across walking, sitting, and other activities. That's not a data flaw, it reflects what the two populations actually did during the recordings. Working-age adults were observed during their full workday (lots of sitting), older adults were observed during free-living movement sessions (mostly walking).
+The activity mix tells a second story. Walking dominates HAR70+, while HARTH spreads more evenly across walking, sitting, and other activities. This reflects what the two populations did during the recordings. Working-age adults were observed during their full workday (lots of sitting), older adults were observed during free-living movement sessions (mostly walking).
 
-**Why this matters for BurnWise:** these two groups aren't interchangeable. Pooling them into a single "reference human" would hide real behavior differences. That's why the app picks one cohort based on your age and shows you numbers grounded in that group's actual data.
+**Why this matters for BurnWise:** these two groups aren't interchangeable. Combining both cohorts into one reference group would hide important differences in activity patterns. The app uses the age-based cohort selection so the estimates are based on the relevant reference group.
         """)
 
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # =============================================================================
-    # ACT 2 — Does "walking" mean the same thing at 30 and 75?
+    # ACT 2 - Cohort comparison
     # =============================================================================
     st.markdown(f"""
 <div style='border-left:3px solid {ACCENT}; padding-left:1rem; margin:1rem 0 1.5rem 0;'>
   <div style='color:{ACCENT}; font-family:"Oswald", sans-serif; font-size:0.75rem;
-              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Act 2</div>
+              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Cohort comparison</div>
   <div style='color:{TEXT_PRIMARY}; font-family:"Oswald", sans-serif; font-size:1.5rem;
-              font-weight:500;'>Does "walking" mean the same thing at 30 and at 75?</div>
+              font-weight:500;'>How does walking differ by cohort?</div>
   <div style='color:{TEXT_SECONDARY}; font-size:0.9rem; margin-top:0.4rem; max-width:720px;'>
-    The sensor sees the physical motion, not the label. When a 75-year-old and a 30-year-old
-    both "walk," the sensor data tells us how similar that walking really is.
+    The sensor data helps compare how the same activity appears across age groups. Walking is used here because it is available in both cohorts and has enough observations for comparison.
   </div>
 </div>
     """, unsafe_allow_html=True)
@@ -1382,16 +1379,16 @@ The activity mix tells a second story. Walking dominates HAR70+, while HARTH spr
         fig.update_xaxes(range=[0, q99])
         st.plotly_chart(style_plot(fig, height=420), use_container_width=True)
 
-        with st.expander("What this means"):
+        with st.expander("Interpretation"):
             harth_median = walking_signal[walking_signal["source"] == "HARTH"]["thigh_z_std"].median()
             har70_median = walking_signal[walking_signal["source"] == "HAR70+"]["thigh_z_std"].median()
             gap_pct = (harth_median - har70_median) / harth_median * 100 if harth_median > 0 else 0
             st.markdown(f"""
-Both distributions are labeled "walking." The sensor disagrees. HARTH's walking produces a thigh acceleration std of **{harth_median:.3f}g** at the median. HAR70+'s walking produces **{har70_median:.3f}g** — about **{gap_pct:.0f}% lower**.
+Both distributions are labeled "walking." The sensor patterns differ. HARTH's walking produces a thigh acceleration std of **{harth_median:.3f}g** at the median. HAR70+'s walking produces **{har70_median:.3f}g**, about **{gap_pct:.0f}% lower**.
 
-That gap is physical. Older adults walk with a flatter, more controlled gait — less vertical bounce per step. A classifier trained only on HARTH data would see HAR70+ walking and reasonably guess it was a slower, lower-intensity activity, because that's what the numbers look like from the outside.
+This gap reflects differences in recorded movement intensity. Older adults walk with a flatter, more controlled gait, less vertical bounce per step. A classifier trained only on HARTH data would see HAR70+ walking and reasonably guess it was a slower, lower-intensity activity, because that's what the numbers look like from the outside.
 
-**Why this matters for BurnWise:** a single MET value for "walking" hides this. That's why the pipeline calibrates intensity within each cohort — so a HAR70+ walking window at their typical intensity doesn't get penalized for producing smaller numbers than a HARTH window at HARTH's typical intensity.
+**Why this matters for BurnWise:** a single MET value for "walking" hides this. The pipeline calibrates intensity within each cohort so a HAR70+ walking window is evaluated against HAR70+ walking patterns rather than HARTH patterns.
             """)
 
     else:  # Gap across all shared activities
@@ -1437,30 +1434,28 @@ That gap is physical. Older adults walk with a flatter, more controlled gait —
         st.plotly_chart(style_plot(fig, height=max(350, 60 + 45 * len(pivot_s))),
                         use_container_width=True)
 
-        with st.expander("What this means"):
+        with st.expander("Interpretation"):
             st.markdown("""
-The pattern generalizes beyond walking. Activities that involve more movement (walking, stairs, shuffling) show the biggest gap between cohorts — HAR70+ consistently produces a lower-intensity sensor signal. Activities with less movement (sitting, lying, standing) show almost no gap.
+The same pattern appears beyond walking. Activities that involve more movement, such as walking, stairs, and shuffling, show the biggest gap between cohorts. HAR70+ consistently produces a lower-intensity sensor signal. Activities with less movement (sitting, lying, standing) show almost no gap.
 
-That's intuitive. Sitting still looks like sitting still regardless of age. But the way you walk, climb stairs, or shuffle is where age actually shows up in the data.
+This pattern is expected. Sitting still looks like sitting still regardless of age. Age differences appear more clearly in walking, stair movement, and shuffling.
 
-**Why this matters for BurnWise:** the intensity gap is predictable and systematic, not random noise. That makes it calibratable. Instead of trying to correct for age directly (which gets ethically messy fast), the pipeline calibrates per cohort per activity — each window is scored against its own reference distribution, so a HAR70+ window at HAR70+ intensity norms gets a fair read.
+**Why this matters for BurnWise:** the intensity gap is systematic rather than random. That makes it calibratable. Instead of trying to correct for age directly (which may introduce fairness concerns), the pipeline calibrates per cohort per activity, each window is scored against its own reference distribution, so a HAR70+ window at HAR70+ intensity norms gets a fair read.
             """)
 
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # =============================================================================
-    # ACT 3 — What does the app tell each user?
+    # ACT 3 - App output
     # =============================================================================
     st.markdown(f"""
 <div style='border-left:3px solid {ACCENT}; padding-left:1rem; margin:1rem 0 1.5rem 0;'>
   <div style='color:{ACCENT}; font-family:"Oswald", sans-serif; font-size:0.75rem;
-              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Act 3</div>
+              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>App output</div>
   <div style='color:{TEXT_PRIMARY}; font-family:"Oswald", sans-serif; font-size:1.5rem;
-              font-weight:500;'>What does the app tell each user?</div>
+              font-weight:500;'>How the app uses the processed data</div>
   <div style='color:{TEXT_SECONDARY}; font-size:0.9rem; margin-top:0.4rem; max-width:720px;'>
-    Calibration has a job: keep the app honest. Different cohorts should see different
-    rankings (because their activity mix is different) but identical activities should
-    produce comparable calorie estimates.
+    Calibration helps keep estimates consistent across cohorts. The app uses cohort-specific activity data so recommendations reflect the activities observed for each group.
   </div>
 </div>
     """, unsafe_allow_html=True)
@@ -1513,11 +1508,11 @@ That's intuitive. Sitting still looks like sitting still regardless of age. But 
         st.plotly_chart(style_plot(fig, height=max(400, 50 + 45 * len(pivot_cal))),
                         use_container_width=True)
 
-        with st.expander("What this means"):
+        with st.expander("Interpretation"):
             st.markdown("""
-The rankings diverge where they should. HARTH's top calorie-burners are running and cycling — activities with no HAR70+ counterpart at all. HAR70+'s top burners are walking and stairs up, because that's the vigorous end of what this cohort actually did.
+The rankings differ in expected places. HARTH's top calorie-burners are running and cycling, activities with no HAR70+ counterpart at all. HAR70+'s top burners are walking and stairs up, because that's the vigorous end of what this cohort actually did.
 
-The app uses this directly in the recommender tab. If a 75-year-old user wants to burn 200 calories, the recommender doesn't offer running (no reference data) or cycling (same). It offers walking and stairs, ranked by how efficiently each hits the goal. That's the whole point of cohort-aware recommendations — fewer options, but every option grounded in real evidence for someone like the user.
+The app uses this directly in the recommender tab. If a 75-year-old user wants to burn 200 calories, the recommender doesn't offer running (no reference data) or cycling (same). It offers walking and stairs, ranked by how efficiently each hits the goal. This is the purpose of cohort-aware recommendations. The app shows fewer options, but the options are supported by data from the relevant cohort.
             """)
 
     else:  # Fairness check
@@ -1556,14 +1551,14 @@ The app uses this directly in the recommender tab. If a 75-year-old user wants t
             st.plotly_chart(style_plot(fig, height=max(350, 60 + 45 * len(shared_cal))),
                             use_container_width=True)
 
-            with st.expander("What this means"):
+            with st.expander("Interpretation"):
                 max_gap = shared_cal["delta_pct"].abs().max()
                 st.markdown(f"""
-For activities both cohorts did, the calorie rates land within **{max_gap:.1f}%** of each other after calibration. That's the fairness check working.
+For activities both cohorts did, the calorie rates land within **{max_gap:.1f}%** of each other after calibration. This supports the fairness check.
 
-Without calibration, HAR70+'s lower-intensity walking signal would have produced systematically lower calorie estimates for the same labeled activity — essentially telling older users they burn fewer calories walking than younger users, even when both are walking at their own typical pace. The calibration step corrects for this by scoring each window against its own cohort's distribution, so "typical walking intensity" is defined per group.
+Without calibration, HAR70+'s lower-intensity walking signal would have produced systematically lower calorie estimates for the same labeled activity, essentially telling older users they burn fewer calories walking than younger users, even when both are walking at their own typical pace. The calibration step corrects for this by scoring each window against its own cohort's distribution, so "typical walking intensity" is defined per group.
 
-**The result:** the app preserves meaningful differences (different cohorts get different activity menus based on what their data supports) without introducing unfair differences (the same activity, done at typical intensity, produces comparable estimates).
+**Result:** the app preserves meaningful differences (different cohorts get different activity menus based on what their data supports) without introducing unfair differences (the same activity, done at typical intensity, produces comparable estimates).
                 """)
         else:
             st.info("Not enough shared activities across cohorts to compute fairness delta.")
@@ -1571,14 +1566,14 @@ Without calibration, HAR70+'s lower-intensity walking signal would have produced
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # =============================================================================
-    # Takeaways
+    # Summary
     # =============================================================================
     st.markdown(f"""
 <div style='border-left:3px solid {ACCENT}; padding-left:1rem; margin:1rem 0 1rem 0;'>
   <div style='color:{ACCENT}; font-family:"Oswald", sans-serif; font-size:0.75rem;
-              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Takeaways</div>
+              letter-spacing:0.25em; text-transform:uppercase; margin-bottom:0.3rem;'>Summary</div>
   <div style='color:{TEXT_PRIMARY}; font-family:"Oswald", sans-serif; font-size:1.5rem;
-              font-weight:500;'>Why this shape of pipeline, why this shape of app</div>
+              font-weight:500;'>Why this pipeline design supports the app</div>
 </div>
     """, unsafe_allow_html=True)
 
@@ -1593,9 +1588,9 @@ Without calibration, HAR70+'s lower-intensity walking signal would have produced
     Cohort context matters.
   </div>
   <div style='color:{TEXT_SECONDARY}; font-size:0.85rem; line-height:1.55;'>
-    HARTH and HAR70+ differ not just in age but in daily routine. Pooling them
-    would hide behaviors that actually shape the output. The app picks one cohort
-    based on your age rather than averaging across both.
+    HARTH and HAR70+ differ in both age and daily routine. Pooling them
+    would hide behaviors that shape the output. The app selects one cohort
+    based on age so the estimate uses the more relevant reference group.
   </div>
 </div>
         """, unsafe_allow_html=True)
@@ -1626,7 +1621,7 @@ Without calibration, HAR70+'s lower-intensity walking signal would have produced
   </div>
   <div style='color:{TEXT_SECONDARY}; font-size:0.85rem; line-height:1.55;'>
     Each window is scored against its own cohort-activity reference. That turns
-    raw sensor differences into comparable calorie rates — without hardcoding
+    raw sensor differences into comparable calorie rates, without hardcoding
     age adjustments anywhere in the formula.
   </div>
 </div>
@@ -1635,7 +1630,7 @@ Without calibration, HAR70+'s lower-intensity walking signal would have produced
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # =============================================================================
-    # Data sources — keep existing expanders
+    # Data sources, keep existing expanders
     # =============================================================================
     st.markdown("#### Under the hood: data sources")
 
@@ -1659,11 +1654,11 @@ Without calibration, HAR70+'s lower-intensity walking signal would have produced
 
     with st.expander("Open-Meteo weather"):
         st.markdown("""
-**Origin:** Open-Meteo's historical archive + live forecast API. Free, no API key, attribution requested. Trondheim coordinates (63.4305, 10.3951).
+**Origin:** Open-Meteo historical archive + live forecast API. Free, no API key, attribution requested. Trondheim coordinates (63.4305, 10.3951).
 
 **Our usage:** hourly temperature, precipitation, and WMO weather codes, aggregated to daily summaries for the recommender filter.
 
-**Known limits:** the bad-weather threshold (codes 51-67, 71-77, 80-82, 95-99) is a judgment call, not a clinical definition. Outdoor options stay visible-but-flagged rather than disappearing, so you can override the default.
+**Known limits:** the bad-weather threshold (codes 51-67, 71-77, 80-82, 95-99) is a judgment call, not a clinical definition. Outdoor options remain visible and flagged, so the user can override the default when appropriate.
         """)
 
     with st.expander("2024 Compendium of Physical Activities"):
@@ -1672,5 +1667,5 @@ Without calibration, HAR70+'s lower-intensity walking signal would have produced
 
 **Our usage:** MET values for each activity name, looked up at app runtime from `dim_activity.base_met`.
 
-**Known limits:** compendium values are population averages — the pipeline's intensity calibration step adjusts these per cohort per window, which is why our calorie estimates differ slightly from raw compendium math for the same activity.
+**Known limits:** compendium values are population averages, the pipeline's intensity calibration step adjusts these per cohort per window, which is why our calorie estimates differ slightly from raw compendium math for the same activity.
         """)
