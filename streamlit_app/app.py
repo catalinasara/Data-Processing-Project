@@ -1293,7 +1293,7 @@ fig.update_layout(
     ),
     margin=dict(b=120) 
 )
-    st.plotly_chart(style_plot(fig, height=340), use_container_width=True)
+st.plotly_chart(style_plot(fig, height=340), use_container_width=True)
     with st.expander("Interpretation"):
         harth_hours = int(footprint[footprint["cohort"] == "HARTH"]["recording_hours"].iloc[0])
         har70_hours = int(footprint[footprint["cohort"] == "HAR70+"]["recording_hours"].iloc[0])
