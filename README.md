@@ -28,9 +28,10 @@ Data-Processing-Project/
 ├── requirements.txt
 ├── notebook/
 │   └── data_processing_pipeline.ipynb
+│   └── config.toml
 ├── app/
 │   ├── app.py
-│   └── config.toml
+│   └── Weather Preparation.ipynb
 ├── data/
 │   ├── met_lookup.csv
 │   ├── weather_raw.json
